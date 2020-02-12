@@ -11,6 +11,7 @@
 #define AQUA_TEAM_X OCTOPUS_X - 4
 #define AQUA_TEAM_Y OCTOPUS_Y - 3
 
+// octopus
 const s_data * tentacle_1[] = {&tent_1_0, &tent_1_1, &tent_1_2, &tent_1_3, &tent_1_4};
 const s_data * tentacle_2[] = {&tent_2_0, &tent_2_1, &tent_2_2, &tent_2_3, &tent_2_4, &tent_2_5}; 
 const s_data * tentacle_3[] = {&tent_3_0, &tent_3_1, &tent_3_2, &tent_3_3, &tent_3_4}; 
@@ -24,12 +25,18 @@ const s_coord const tentacle_4_coord[] = {{OCTOPUS_X + 6, OCTOPUS_Y + 6}, {OCTOP
 const s_data * * tentacles[OCTOPUS_LEG_COUNT] = {&tentacle_1, &tentacle_2, &tentacle_3, &tentacle_4};
 const s_coord * tentacle_coords[OCTOPUS_LEG_COUNT] = {&tentacle_1_coord, &tentacle_2_coord, &tentacle_3_coord, &tentacle_4_coord};
 
+// aquanauts
 const s_data * aqua_empty[] = {&aqua_0_empty, &aqua_1_empty, &aqua_2_empty, &aqua_3_empty, &aqua_4_empty, &aqua_5_0_empty};
 const s_data * aqua_full[] = {&aqua_0_full, &aqua_1_full, &aqua_2_full, &aqua_3_full, &aqua_4_full, &aqua_5_0_full};
 const s_data * aqua_erase[] = {&aqua_0_out, &null_sprite, &null_sprite, &null_sprite, &null_sprite, &null_sprite};
 const s_coord const aqua_coords[] = {{AQUA_X - 2, AQUA_Y - 3}, {AQUA_X - 2, AQUA_Y + 1}, {AQUA_X - 1, AQUA_Y + 6}, {AQUA_X + 4, AQUA_Y + 9}, {AQUA_X + 7, AQUA_Y + 9}, {AQUA_X + 10, AQUA_Y + 9}};
 
 const s_data * aqua_team[] = {&zero_left, &one_left, &two_left};
+
+// animations
+const s_data * yield_ani[] = {&aqua_0_empty, &aqua_0_full, &aqua_0_empty, &aqua_0_full, &aqua_0_empty, &aqua_0_full};
+const s_data * grab_ani_empty[] = {&aqua_5_0_full, &aqua_5_1_empty, &aqua_5_2_empty};
+const s_data * grab_ani_full[] = {&aqua_5_0_full, &aqua_5_1_full, &aqua_5_2_full};
 
 typedef struct {
     UBYTE pos, old_pos, dir, len;
@@ -45,14 +52,17 @@ static s_data * * tentacle;            // points to current tentacle sprites
 static s_coord * tentacle_coord;       // points to current tentacle sprites coords
 static t_params * tentacle_params;     // points to current tentacle params
 
-static s_coord * aqua_coord;           // current coordinates of aquanaut
-static s_data * aqua_man;              // current aquanaut sprite
+static s_coord * aqua_coord;           // current coordinates of aquanaut or animation
+static s_data * aqua_man;              // current aquanaut sprite or animation
 static s_data * aqua_man_del;          // current aquanaut empty sprite 
+
 
 static UWORD seed;                     // random seed value 
 static UBYTE time, rndval;             // time in vsync's; current random value
 static UBYTE x, y, i, j, joy;          // misc variables
 static UBYTE bag, bag_old, team_size;  // bag size
+
+static UBYTE animation, animation_old, ani_type; // animation clock
 
 void main()
 {
@@ -95,26 +105,44 @@ void main()
     current = 0; 
     bag = 0; bag_old = bag;
     aqua_pos = 0; aqua_pos_old = 1;
+    animation = 0; animation_old = animation;
     while(1) {
         wait_vbl_done();
         time++;
 
-        joy = joypad();
-        if ((joy & J_B) || (joy & J_LEFT)) {
-            if (aqua_pos > 0) {
-                aqua_pos--;
-            };
-            waitpadup();
-        } else if ((joy & J_A) || (joy & J_RIGHT)) {
-            if (aqua_pos < AQUA_STEP_COUNT - 1) {
-                aqua_pos++;
-            } else {
-                bag++;
+        if (animation > 0) {
+            if (animation != animation_old) {
+                if (ani_type == 0) {
+                    aqua_coord = &aqua_coords[0];
+                    aqua_man = yield_ani[animation - 1];
+                } else if (ani_type == 1) {
+                    aqua_coord = &aqua_coords[AQUA_STEP_COUNT - 1];
+                    if (!bag) aqua_man = grab_ani_empty[animation - 1]; else aqua_man = grab_ani_full[animation - 1];
+                }                
+                set_bkg_tiles(aqua_coord->x, aqua_coord->y, aqua_man->dim.x, aqua_man->dim.y, aqua_man->data);
             }
-            waitpadup();
+            animation_old = animation;
+            if ((time & 3) == 0) animation--;
+        } else {    
+            joy = joypad();
+            if ((joy & J_B) || (joy & J_LEFT)) {
+                if (aqua_pos > 0) {
+                    aqua_pos--;
+                };
+                waitpadup();
+            } else if ((joy & J_A) || (joy & J_RIGHT)) {
+                if (aqua_pos < AQUA_STEP_COUNT - 1) {
+                    aqua_pos++;
+                } else {
+                    bag++;
+                    animation = 3;
+                    ani_type = 1;
+                }
+                waitpadup();
+            }
         }
         
-        if ((aqua_pos != aqua_pos_old) || (!bag_old && bag) || (bag_old && !bag)) {
+        if ((aqua_pos != aqua_pos_old) || (!bag_old && bag) /*|| (bag_old && !bag)*/) {
             // delete previous sprite
             aqua_coord = &aqua_coords[aqua_pos_old];
             if (!bag) aqua_man = aqua_empty[aqua_pos_old]; else aqua_man = aqua_full[aqua_pos_old];
@@ -128,7 +156,13 @@ void main()
             aqua_pos_old = aqua_pos;
             bag_old = bag;
             
-            if (!aqua_pos) bag = 0;
+            if (!aqua_pos) { 
+                bag = 0;
+                if (bag_old != bag) { 
+                    if (bag_old > 10) animation = 5; else animation = 3;
+                    ani_type = 0;
+                }
+            }    
         }
         
         if ((time & 7) == 0) {        
