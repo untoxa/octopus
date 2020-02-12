@@ -1,0 +1,1 @@
+@..\..\bgb\bgb64.exe bin\octopus.gb

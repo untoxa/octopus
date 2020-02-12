@@ -1,0 +1,6 @@
+/src/bin
+/units
+*.bak
+*.dof
+*.dsk
+*.out

@@ -1,0 +1,1 @@
+@cutter 02_octo.chr 02_octo.meta >02_octopus_gfx.out
