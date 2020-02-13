@@ -4,7 +4,7 @@
 
 #define OCTOPUS_X 7
 #define OCTOPUS_Y 4
-#define OCTOPUS_LEG_COUNT 4
+#define OCTOPUS_TENTACLE_COUNT 4
 #define AQUA_X OCTOPUS_X - 5
 #define AQUA_Y OCTOPUS_Y
 #define AQUA_STEP_COUNT 6  
@@ -22,8 +22,8 @@ const s_coord const tentacle_2_coord[] = {{OCTOPUS_X,     OCTOPUS_Y + 3}, {OCTOP
 const s_coord const tentacle_3_coord[] = {{OCTOPUS_X + 3, OCTOPUS_Y + 5}, {OCTOPUS_X + 3, OCTOPUS_Y + 5}, {OCTOPUS_X + 3, OCTOPUS_Y + 6}, {OCTOPUS_X + 3, OCTOPUS_Y + 7}, {OCTOPUS_X + 3, OCTOPUS_Y + 8}};
 const s_coord const tentacle_4_coord[] = {{OCTOPUS_X + 6, OCTOPUS_Y + 6}, {OCTOPUS_X + 6, OCTOPUS_Y + 6}, {OCTOPUS_X + 6, OCTOPUS_Y + 7}, {OCTOPUS_X + 6, OCTOPUS_Y + 8}};
 
-const s_data * * tentacles[OCTOPUS_LEG_COUNT] = {&tentacle_1, &tentacle_2, &tentacle_3, &tentacle_4};
-const s_coord * tentacle_coords[OCTOPUS_LEG_COUNT] = {&tentacle_1_coord, &tentacle_2_coord, &tentacle_3_coord, &tentacle_4_coord};
+const s_data * * tentacles[OCTOPUS_TENTACLE_COUNT] = {&tentacle_1, &tentacle_2, &tentacle_3, &tentacle_4};
+const s_coord * tentacle_coords[OCTOPUS_TENTACLE_COUNT] = {&tentacle_1_coord, &tentacle_2_coord, &tentacle_3_coord, &tentacle_4_coord};
 
 // aquanauts
 const s_data * aqua_empty[] = {&aqua_0_empty, &aqua_1_empty, &aqua_2_empty, &aqua_3_empty, &aqua_4_empty, &aqua_5_0_empty};
@@ -44,7 +44,7 @@ typedef struct {
     UBYTE pos, old_pos, dir, len;
 } t_params;
 
-static t_params tentacles_params[OCTOPUS_LEG_COUNT] = {{0, 0, 1, 5}, {0, 0, 1, 6}, {0, 0, 1, 5}, {0, 0, 1, 4}};
+static t_params tentacles_params[OCTOPUS_TENTACLE_COUNT] = {{0, 0, 1, 5}, {0, 0, 1, 6}, {0, 0, 1, 5}, {0, 0, 1, 4}};
 
 
 static UBYTE current;                  // current tentacle number
@@ -64,7 +64,11 @@ static UBYTE time, rndval;             // time in vsync's; current random value
 static UBYTE i, j, joy, reinit;        // misc variables
 static UBYTE bag, bag_old, team_size;  // bag size
 
-static UBYTE animation, animation_old, ani_type; // animation clock
+enum animation_type { ANI_NONE, ANI_YIELD, ANI_GRAB, ANI_AGONY };
+
+static enum animation_type ani_type;
+
+static UBYTE animation, animation_old; // animation clock
 
 static UWORD score;
 
@@ -89,43 +93,36 @@ void main()
     set_bkg_data(0x0, tile_data.count, tile_data.data);     // initialize tiles data
 
     for (i = 0; i < 18; i += 4)                             // clear background
-        for (j = 0; j < 20; j += 4)
+        for (j = 0; j < 20; j += 4) 
             set_bkg_tiles(j, i, null_sprite.dim.x, null_sprite.dim.y, null_sprite.data);
 
     DISPLAY_ON;
     enable_interrupts();
 
-
     seed = DIV_REG;
     seed |= (UWORD)DIV_REG << 8;
     initrand(seed);        
-
-//    wait_vbl_done();
-//    set_bkg_tiles(OCTOPUS_X, OCTOPUS_Y, octo_head.dim.x, octo_head.dim.y, octo_head.data); // draw octopus body
-//    set_bkg_tiles(OCTOPUS_X + 9, OCTOPUS_Y + 10, chest.dim.x, chest.dim.y, chest.data);    // draw treasures 
-
-    team_size = 2;    
-//    set_bkg_tiles(AQUA_TEAM_X, AQUA_TEAM_Y, aqua_team[team_size]->dim.x, aqua_team[team_size]->dim.y, aqua_team[team_size]->data);
     
     time = 0;
     current = 0; 
     bag = 0; bag_old = bag;
     aqua_pos = 0; aqua_pos_old = 1;
-    animation = 0; animation_old = animation;
-    score = 0; reinit = 1;
+    animation = 0; animation_old = animation; ani_type = ANI_NONE;
+    team_size = 2; score = 0; 
+    reinit = 1;
     while(1) {
         wait_vbl_done();
         time++;
 
         if (animation > 0) {
             if (animation != animation_old) {
-                if (ani_type == 0) {
+                if (ani_type == ANI_YIELD) {
                     aqua_coord = &aqua_coords[0];
                     aqua_man = yield_ani[animation - 1];
-                } else if (ani_type == 1) {
+                } else if (ani_type == ANI_GRAB) {
                     aqua_coord = &aqua_coords[AQUA_STEP_COUNT - 1];
                     if (!bag) aqua_man = grab_ani_empty[animation - 1]; else aqua_man = grab_ani_full[animation - 1];
-                } else if (ani_type == 2) {
+                } else if (ani_type == ANI_AGONY) {
                     aqua_coord = &agony_coord;
                     aqua_man = agony_ani[animation - 1];
                     if (animation == 1) reinit = 1;
@@ -147,7 +144,7 @@ void main()
                 } else {
                     bag++;
                     animation = 3;
-                    ani_type = 1;
+                    ani_type = ANI_GRAB;
                 }
                 waitpadup();
             }
@@ -157,9 +154,11 @@ void main()
             set_bkg_tiles(OCTOPUS_X, OCTOPUS_Y, octo_head.dim.x, octo_head.dim.y, octo_head.data); // draw octopus body
             set_bkg_tiles(OCTOPUS_X + 9, OCTOPUS_Y + 10, chest.dim.x, chest.dim.y, chest.data);    // draw treasures 
             set_bkg_tiles(AQUA_TEAM_X, AQUA_TEAM_Y, aqua_team[team_size]->dim.x, aqua_team[team_size]->dim.y, aqua_team[team_size]->data);
+            ani_type = ANI_NONE;
             reinit = 0;
         }
         
+        // draw aquanaut
         if ((aqua_pos != aqua_pos_old) || (!bag_old && bag)) {
             // delete previous sprite
             aqua_coord = &aqua_coords[aqua_pos_old];
@@ -179,14 +178,15 @@ void main()
                 bag = 0;
                 if (bag_old != bag) { 
                     if (bag_old > 10) animation = 5; else animation = 3;
-                    ani_type = 0;
+                    ani_type = ANI_YIELD;
                 }
             }    
         }
         
-        if ((time & 7) == 0) {        
+        // move tentacles and redraw them
+        if (((time & 7) == 0) && (ani_type != ANI_AGONY)) {        
             rndval = rand();
-            current = rndval % OCTOPUS_LEG_COUNT;
+            current = rndval % OCTOPUS_TENTACLE_COUNT;
             tentacle_params = &tentacles_params[current];
             
             i = tentacle_params->pos;
@@ -211,14 +211,26 @@ void main()
             }
         }
         
+        // check aquanaut is caught
         if (aqua_pos > 1) {
             tentacle_params = &tentacles_params[aqua_pos - 2];
             if (tentacle_params->pos == tentacle_params->len - 1) {
+                // prepare octopus for animation (all tentacles in)
+                for (i = 0; i < OCTOPUS_TENTACLE_COUNT; i++) {
+                    tentacle_params = &tentacles_params[i];
+                    tentacle_params->pos = 0; tentacle_params->old_pos = 0; tentacle_params->dir = 1;                    
+
+                    tentacle = tentacles[i];
+                    tentacle_coord = tentacle_coords[i];
+                    for (j = 1; j < tentacle_params->len; j++) {
+                        set_bkg_tiles(tentacle_coord[j].x, tentacle_coord[j].y, tentacle[j]->dim.x, tentacle[j]->dim.y, null_sprite.data);
+                    }    
+                    set_bkg_tiles(tentacle_coord[0].x, tentacle_coord[0].y, tentacle[0]->dim.x, tentacle[0]->dim.y, tentacle[0]->data); 
+                }
                 animation = 9;
-                ani_type = 2;
+                ani_type = ANI_AGONY;
                 bag = 0;
                 aqua_pos = 0;
-                reinit = 1;
             }
         }    
     }
