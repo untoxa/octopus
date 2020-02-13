@@ -1,5 +1,5 @@
 #include <gb/gb.h>
-#include <rand.h>
+#include <gb/rand.h>
 #include "octopus_gfx.h"
 
 #define OCTOPUS_X 7
@@ -227,7 +227,7 @@ void main()
         
         // move tentacles and redraw them
         if (((time & 7) == 0) && (ani_type != ANI_AGONY)) {        
-            rndval = rand();
+            rndval = _rand();
             current = rndval % OCTOPUS_TENTACLE_COUNT;
             tentacle_params = &tentacles_params[current];
             
