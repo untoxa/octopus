@@ -10,6 +10,7 @@
 #define AQUA_STEP_COUNT 6  
 #define AQUA_TEAM_X OCTOPUS_X - 4
 #define AQUA_TEAM_Y OCTOPUS_Y - 3
+#define AQUA_TEAM_SIZE 3
 
 // octopus
 const s_data * tentacle_1[] = {&tent_1_0, &tent_1_1, &tent_1_2, &tent_1_3, &tent_1_4};
@@ -26,18 +27,18 @@ const s_data * * tentacles[OCTOPUS_TENTACLE_COUNT] = {&tentacle_1, &tentacle_2, 
 const s_coord * tentacle_coords[OCTOPUS_TENTACLE_COUNT] = {&tentacle_1_coord, &tentacle_2_coord, &tentacle_3_coord, &tentacle_4_coord};
 
 // aquanauts
-const s_data * aqua_empty[] = {&aqua_0_empty, &aqua_1_empty, &aqua_2_empty, &aqua_3_empty, &aqua_4_empty, &aqua_5_0_empty};
-const s_data * aqua_full[] = {&aqua_0_full, &aqua_1_full, &aqua_2_full, &aqua_3_full, &aqua_4_full, &aqua_5_0_full};
-const s_data * aqua_erase[] = {&aqua_0_out, &null_sprite, &null_sprite, &null_sprite, &null_sprite, &null_sprite};
-const s_coord const aqua_coords[] = {{AQUA_X - 2, AQUA_Y - 3}, {AQUA_X - 2, AQUA_Y + 1}, {AQUA_X - 1, AQUA_Y + 6}, {AQUA_X + 4, AQUA_Y + 9}, {AQUA_X + 7, AQUA_Y + 9}, {AQUA_X + 10, AQUA_Y + 9}};
+const s_data * aqua_empty[AQUA_STEP_COUNT] = {&aqua_0_empty, &aqua_1_empty, &aqua_2_empty, &aqua_3_empty, &aqua_4_empty, &aqua_5_0_empty};
+const s_data * aqua_full[AQUA_STEP_COUNT] = {&aqua_0_full, &aqua_1_full, &aqua_2_full, &aqua_3_full, &aqua_4_full, &aqua_5_0_full};
+const s_data * aqua_erase[AQUA_STEP_COUNT] = {&aqua_0_out, &null_sprite, &null_sprite, &null_sprite, &null_sprite, &null_sprite};
+const s_coord const aqua_coords[AQUA_STEP_COUNT] = {{AQUA_X - 2, AQUA_Y - 3}, {AQUA_X - 2, AQUA_Y + 1}, {AQUA_X - 1, AQUA_Y + 6}, {AQUA_X + 4, AQUA_Y + 9}, {AQUA_X + 7, AQUA_Y + 9}, {AQUA_X + 10, AQUA_Y + 9}};
 
-const s_data * aqua_team[] = {&zero_left, &one_left, &two_left};
+const s_data * aqua_team[AQUA_TEAM_SIZE + 1] = {&zero_left, &zero_left, &one_left, &two_left};
 
 // animations
-const s_data * yield_ani[] = {&aqua_0_empty, &aqua_0_full, &aqua_0_empty, &aqua_0_full, &aqua_0_empty, &aqua_0_full};
-const s_data * grab_ani_empty[] = {&aqua_5_0_full, &aqua_5_1_empty, &aqua_5_2_empty};
-const s_data * grab_ani_full[] = {&aqua_5_0_full, &aqua_5_1_full, &aqua_5_2_full};
-const s_data * agony_ani[] = {&agony_over, &agony_1, &agony_2, &agony_1, &agony_2, &agony_1, &agony_2, &agony_1, &agony_2};
+const s_data * yield_ani[6] = {&aqua_0_empty, &aqua_0_full, &aqua_0_empty, &aqua_0_full, &aqua_0_empty, &aqua_0_full};
+const s_data * grab_ani_empty[3] = {&aqua_5_0_full, &aqua_5_1_empty, &aqua_5_2_empty};
+const s_data * grab_ani_full[3] = {&aqua_5_0_full, &aqua_5_1_full, &aqua_5_2_full};
+const s_data * agony_ani[9] = {&agony_over, &agony_1, &agony_2, &agony_1, &agony_2, &agony_1, &agony_2, &agony_1, &agony_2};
 const s_coord const agony_coord = {OCTOPUS_X, OCTOPUS_Y + 3};
 
 typedef struct {
@@ -61,12 +62,16 @@ static s_data * aqua_man_del;          // current aquanaut empty sprite
 
 static UWORD seed;                     // random seed value 
 static UBYTE time, rndval;             // time in vsync's; current random value
-static UBYTE i, j, joy, reinit;        // misc variables
+static UBYTE i, j, joy;                // misc variables
 static UBYTE bag, bag_old, team_size;  // bag size
 
 enum animation_type { ANI_NONE, ANI_YIELD, ANI_GRAB, ANI_AGONY };
+enum reinit_signal { NONE, REINIT, KILLED, STARTUP };
+enum game_state {GAME, GAMEOVER};
 
 static enum animation_type ani_type;
+static enum reinit_signal reinit;
+static enum game_state gamestate;
 
 static UBYTE animation, animation_old; // animation clock
 
@@ -93,7 +98,7 @@ void main()
     set_bkg_data(0x0, tile_data.count, tile_data.data);     // initialize tiles data
 
     for (i = 0; i < 18; i += 4)                             // clear background
-        for (j = 0; j < 20; j += 4) 
+        for (j = 0; j < 20; j += 4)
             set_bkg_tiles(j, i, null_sprite.dim.x, null_sprite.dim.y, null_sprite.data);
 
     DISPLAY_ON;
@@ -108,8 +113,8 @@ void main()
     bag = 0; bag_old = bag;
     aqua_pos = 0; aqua_pos_old = 1;
     animation = 0; animation_old = animation; ani_type = ANI_NONE;
-    team_size = 2; score = 0; 
-    reinit = 1;
+    team_size = AQUA_TEAM_SIZE; score = 0; 
+    reinit = REINIT; gamestate = GAME;
     while(1) {
         wait_vbl_done();
         time++;
@@ -125,41 +130,78 @@ void main()
                 } else if (ani_type == ANI_AGONY) {
                     aqua_coord = &agony_coord;
                     aqua_man = agony_ani[animation - 1];
-                    if (animation == 1) reinit = 1;
+                    if (animation == 1) {
+                        reinit = KILLED;
+                    }
                 }                    
                 set_bkg_tiles(aqua_coord->x, aqua_coord->y, aqua_man->dim.x, aqua_man->dim.y, aqua_man->data);
             }
             animation_old = animation;
             if ((time & 3) == 0) animation--;
-        } else {    
+        } else {
             joy = joypad();
-            if ((joy & J_B) || (joy & J_LEFT)) {
-                if (aqua_pos > 0) {
-                    aqua_pos--;
-                };
-                waitpadup();
-            } else if ((joy & J_A) || (joy & J_RIGHT)) {
-                if (aqua_pos < AQUA_STEP_COUNT - 1) {
-                    aqua_pos++;
-                } else {
-                    bag++;
-                    animation = 3;
-                    ani_type = ANI_GRAB;
+            if (gamestate == GAME) {
+                if ((joy & J_B) || (joy & J_LEFT)) {
+                    if (aqua_pos > 0) {
+                        aqua_pos--;
+                    };
+                    waitpadup();
+                } else if ((joy & J_A) || (joy & J_RIGHT)) {
+                    if (aqua_pos < AQUA_STEP_COUNT - 1) {
+                        aqua_pos++;
+                    } else {
+                        bag++;
+                        animation = 3;
+                        ani_type = ANI_GRAB;
+                    }
+                    waitpadup();
                 }
-                waitpadup();
+            } else if (gamestate == GAMEOVER) {
+                if (joy & J_START) {
+                    waitpadup();
+                    reinit = STARTUP;
+                }
             }
         }
 
-        if (reinit > 0) {
+        // handle start game
+        if (reinit == STARTUP) {
+            // init some default values
+            bag = 0; bag_old = bag;
+            aqua_pos = 0; aqua_pos_old = 1;
+            team_size = AQUA_TEAM_SIZE; score = 0;             
+            // draw boat
+            aqua_man = aqua_team[team_size];
+            set_bkg_tiles(AQUA_TEAM_X, AQUA_TEAM_Y, aqua_man->dim.x, aqua_man->dim.y, aqua_man->data);
+            // back to game
+            reinit = NONE; gamestate = GAME;            
+        }
+
+        // handle kill event
+        if (reinit == KILLED) {
+            bag = 0;
+            if (team_size != 0) team_size--;
+            if (!team_size) {
+                aqua_pos = AQUA_STEP_COUNT;
+                gamestate = GAMEOVER;
+            } else aqua_pos = 0;  
+            reinit = REINIT;
+        }
+                
+        // draw initial screen at startup/after death
+        if (reinit == REINIT) {
             set_bkg_tiles(OCTOPUS_X, OCTOPUS_Y, octo_head.dim.x, octo_head.dim.y, octo_head.data); // draw octopus body
             set_bkg_tiles(OCTOPUS_X + 9, OCTOPUS_Y + 10, chest.dim.x, chest.dim.y, chest.data);    // draw treasures 
-            set_bkg_tiles(AQUA_TEAM_X, AQUA_TEAM_Y, aqua_team[team_size]->dim.x, aqua_team[team_size]->dim.y, aqua_team[team_size]->data);
+            // draw boat
+            aqua_man = aqua_team[team_size];
+            set_bkg_tiles(AQUA_TEAM_X, AQUA_TEAM_Y, aqua_man->dim.x, aqua_man->dim.y, aqua_man->data);
+            
             ani_type = ANI_NONE;
-            reinit = 0;
+            reinit = NONE;
         }
         
         // draw aquanaut
-        if ((aqua_pos != aqua_pos_old) || (!bag_old && bag)) {
+        if ((aqua_pos < AQUA_STEP_COUNT) && (aqua_pos != aqua_pos_old) || (!bag_old && bag)) {
             // delete previous sprite
             aqua_coord = &aqua_coords[aqua_pos_old];
             if (!bag) aqua_man = aqua_empty[aqua_pos_old]; else aqua_man = aqua_full[aqua_pos_old];
@@ -212,7 +254,7 @@ void main()
         }
         
         // check aquanaut is caught
-        if (aqua_pos > 1) {
+        if ((aqua_pos > 1) && (aqua_pos < OCTOPUS_TENTACLE_COUNT + 2)) {
             tentacle_params = &tentacles_params[aqua_pos - 2];
             if (tentacle_params->pos == tentacle_params->len - 1) {
                 // prepare octopus for animation (all tentacles in)
@@ -225,12 +267,16 @@ void main()
                     for (j = 1; j < tentacle_params->len; j++) {
                         set_bkg_tiles(tentacle_coord[j].x, tentacle_coord[j].y, tentacle[j]->dim.x, tentacle[j]->dim.y, null_sprite.data);
                     }    
-                    set_bkg_tiles(tentacle_coord[0].x, tentacle_coord[0].y, tentacle[0]->dim.x, tentacle[0]->dim.y, tentacle[0]->data); 
+                    set_bkg_tiles(tentacle_coord[0].x, tentacle_coord[0].y, tentacle[0]->dim.x, tentacle[0]->dim.y, tentacle[0]->data);                     
                 }
+                // delete aquanaut
+                aqua_coord = &aqua_coords[aqua_pos];
+                if (!bag) aqua_man = aqua_empty[aqua_pos]; else aqua_man = aqua_full[aqua_pos];
+                aqua_man_del = aqua_erase[aqua_pos]; 
+                set_bkg_tiles(aqua_coord->x, aqua_coord->y, aqua_man->dim.x, aqua_man->dim.y, aqua_man_del->data);
+                
                 animation = 9;
                 ani_type = ANI_AGONY;
-                bag = 0;
-                aqua_pos = 0;
             }
         }    
     }
