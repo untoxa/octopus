@@ -23,8 +23,8 @@ const s_coord const tentacle_2_coord[] = {{OCTOPUS_X,     OCTOPUS_Y + 3}, {OCTOP
 const s_coord const tentacle_3_coord[] = {{OCTOPUS_X + 3, OCTOPUS_Y + 5}, {OCTOPUS_X + 3, OCTOPUS_Y + 5}, {OCTOPUS_X + 3, OCTOPUS_Y + 6}, {OCTOPUS_X + 3, OCTOPUS_Y + 7}, {OCTOPUS_X + 3, OCTOPUS_Y + 8}};
 const s_coord const tentacle_4_coord[] = {{OCTOPUS_X + 6, OCTOPUS_Y + 6}, {OCTOPUS_X + 6, OCTOPUS_Y + 6}, {OCTOPUS_X + 6, OCTOPUS_Y + 7}, {OCTOPUS_X + 6, OCTOPUS_Y + 8}};
 
-const s_data * * tentacles[OCTOPUS_TENTACLE_COUNT] = {&tentacle_1, &tentacle_2, &tentacle_3, &tentacle_4};
-const s_coord * tentacle_coords[OCTOPUS_TENTACLE_COUNT] = {&tentacle_1_coord, &tentacle_2_coord, &tentacle_3_coord, &tentacle_4_coord};
+const s_data * * tentacles[OCTOPUS_TENTACLE_COUNT] = {tentacle_1, tentacle_2, tentacle_3, tentacle_4};
+const s_coord * tentacle_coords[OCTOPUS_TENTACLE_COUNT] = {tentacle_1_coord, tentacle_2_coord, tentacle_3_coord, tentacle_4_coord};
 
 // aquanauts
 const s_data * aqua_empty[AQUA_STEP_COUNT] = {&aqua_0_empty, &aqua_1_empty, &aqua_2_empty, &aqua_3_empty, &aqua_4_empty, &aqua_5_0_empty};
