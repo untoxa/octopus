@@ -1,5 +1,5 @@
 #include <gb/gb.h>
-#include <rand.h>
+#include <gb/rand.h>
 #include "octopus_gfx.h"
 
 #define OCTOPUS_X 7
@@ -52,12 +52,12 @@ static UBYTE current;                  // current tentacle number
 static UBYTE aqua_pos, aqua_pos_old;   // aquanaut position
 
 static s_data * * tentacle;            // points to current tentacle sprites
-static s_coord * tentacle_coord;       // points to current tentacle sprites coords
+static const s_coord * tentacle_coord;       // points to current tentacle sprites coords
 static t_params * tentacle_params;     // points to current tentacle params
 
-static s_coord * aqua_coord;           // current coordinates of aquanaut or animation
-static s_data * aqua_man;              // current aquanaut sprite or animation
-static s_data * aqua_man_del;          // current aquanaut empty sprite 
+static const s_coord * aqua_coord;           // current coordinates of aquanaut or animation
+static const s_data * aqua_man;              // current aquanaut sprite or animation
+static const s_data * aqua_man_del;          // current aquanaut empty sprite
 
 
 static UWORD seed;                     // random seed value 
@@ -227,7 +227,7 @@ void main()
         
         // move tentacles and redraw them
         if (((time & 7) == 0) && (ani_type != ANI_AGONY)) {        
-            rndval = rand();
+            rndval = _rand();
             current = rndval % OCTOPUS_TENTACLE_COUNT;
             tentacle_params = &tentacles_params[current];
             
