@@ -1,5 +1,4 @@
 #include <gb/gb.h>
-#include <gb/cgb.h>
 #include <gb/rand.h>
 #include "octopus_gfx.h"
 
@@ -81,10 +80,8 @@ static UWORD score;
 void main()
 {
     disable_interrupts();
-    DISPLAY_OFF;
     
-//    LCDC_REG = 0x55;
-    LCDC_REG = 0x95;
+    LCDC_REG = 0x55;
     /*
      * LCD        = Off
      * WindowBank = 0x9C00
@@ -100,9 +97,8 @@ void main()
 
     set_bkg_data(0x0, tile_data.count, tile_data.data);     // initialize tiles data
 
-    for (i = 0; i < 18; i += 4)                             // clear background
-        for (j = 0; j < 20; j += 4)
-            set_bkg_tiles(j, i, null_sprite.dim.x, null_sprite.dim.y, null_sprite.data);
+    for (i = 0; i < 18; i ++)                               // clear background
+        set_bkg_tiles(0, i, 20, 1, null_sprite.data);
 
     DISPLAY_ON;
     enable_interrupts();

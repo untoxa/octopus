@@ -4,3 +4,8 @@
 *.dsk
 *.out
 *.gb
+/gfx/00_octo.chr
+/gfx/01_octo.chr
+/gfx/02_octo.chr
+/gfx/02_octo.meta
+/gfx/@02_make_octo.bat
