@@ -1,4 +1,5 @@
 #include <gb/gb.h>
+#include <gb/cgb.h>
 #include <gb/rand.h>
 #include "octopus_gfx.h"
 
@@ -80,8 +81,10 @@ static UWORD score;
 void main()
 {
     disable_interrupts();
+    DISPLAY_OFF;
     
-    LCDC_REG = 0x55;
+//    LCDC_REG = 0x55;
+    LCDC_REG = 0x95;
     /*
      * LCD        = Off
      * WindowBank = 0x9C00

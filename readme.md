@@ -2,7 +2,8 @@ Octopus for GameBoy
 -------------------
 
 You may need: 
-1. GBDK
-2. BGB emulator
-3. YY-CHR sprite eritor
+1. GBDK-n
+2. SDCC 4.0
+3. BGB emulator
+4. YY-CHR sprite eritor
 

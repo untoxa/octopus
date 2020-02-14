@@ -1,6 +1,6 @@
-/src/bin
-/units
+/build
 *.bak
 *.dof
 *.dsk
 *.out
+*.gb
