@@ -1,13 +1,15 @@
 GBDK := gbdk-n
 LD := sdcc
 CC := sdcc
-CPPFLAGS := -mgbz80 -DUSE_SFR_FOR_REG -I$(GBDK)/include/ -I$(GBDK)/include/asm/
+CPPFLAGS := -mgbz80 -I$(GBDK)/include/ -I$(GBDK)/include/asm/
 LDFLAGS := -mgbz80 --no-std-crt0 --data-loc 0xc0a0 -L$(GBDK)/lib $(GBDK)/lib/crt0.rel -lgb
 
-all: src/octopus.gb
-%.gb: %.ihx
-	makebin $< > $@
-%.ihx: %.rel
+all: build octopus.gb
+build:
+	mkdir build
+%.gb: build/%.ihx
+	makebin -Z $< > $@
+build/%.ihx: build/%.rel
 	$(LD) $(LDFLAGS) -o $@ $<
-%.rel: %.c
+build/%.rel: src/%.c
 	$(CC) -c $(CFLAGS) $(CPPFLAGS) -o $@ $<
